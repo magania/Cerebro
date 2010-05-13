@@ -22,7 +22,7 @@ int DataSet::msbchar_2_int(char* msbchar) {
 	return *((int*) lsbchar);
 }
 
-DataSet::DataSet(const char* file_name) {
+void DataSet::read_idx(DataSet *dataset, const char* file_name) {
 	ifstream file(file_name, ios::in | ios::binary);
 	if (!file.is_open()) {
 		cout << "Unable to open file. " << file_name << endl;
@@ -43,46 +43,34 @@ DataSet::DataSet(const char* file_name) {
 	file.read(c_row, 4);
 	file.read(c_col, 4);
 
-	_size = msbchar_2_int(c_image);
+	dataset->size = msbchar_2_int(c_image);
 	int rows = msbchar_2_int(c_row);
 	int cols = msbchar_2_int(c_col);
 	cout << "Rows: " << rows << "  Cols: " << cols << endl;
-	_dim = rows * cols;
+	dataset->dim = rows * cols;
 
-	char *pixels = new char[_size * _dim];
-	file.read(pixels, _size * _dim);
+	char *pixels = new char[dataset->size * dataset->dim];
+	file.read(pixels, dataset->size * dataset->dim);
 	file.close();
 
-	_data = new float*[_size];
-	for (int i = 0; i < _size; i++) {
-		_data[i] = new float[_dim];
-		for (unsigned j = 0; j < _dim; j++)
-			_data[i][j] = ((unsigned char) pixels[_dim * i + j]) / 256.0;
+	dataset->data = new float*[dataset->size];
+	for (int i = 0; i < dataset->size; i++) {
+		dataset->data[i] = new float[dataset->dim];
+		for (unsigned j = 0; j < dataset->dim; j++)
+			dataset->data[i][j] = ((unsigned char) pixels[dataset->dim * i + j]) / 256.0;
 	}
 	delete pixels;
 }
 
-float *DataSet::get(int i) {
-	return _data[i];
-}
-
-int DataSet::size() {
-	return _size;
-}
-
-int DataSet::dim(){
-	return _dim;
-}
-
-void DataSet::print(int i, int cols) {
-	for (int j=0; j<_dim; j++){
+void DataSet::print(DataSet *dataset, int i, int cols) {
+	for (int j=0; j<dataset->dim; j++){
 		if ( j%cols == 0 ) cout << "\x1b[0m" << endl;
-		cout << "\x1b[48;5;" << 255 - (int) (_data[i][j] * 24) << "m ";
+		cout << "\x1b[48;5;" << 255 - (int) (dataset->data[i][j] * 24) << "m ";
 	}
 	cout << "\x1b[0m" << endl;
 }
 
-void LabeledDataSet::read_idx_labels(const char *file_name) {
+void LabeledDataSet::read_idx_labels(LabeledDataSet *ldataset, const char *file_name) {
 	ifstream file(file_name, ios::in | ios::binary);
 	if (!file.is_open()) {
 		cout << "Unable to open file. " << file_name << endl;
@@ -101,13 +89,18 @@ void LabeledDataSet::read_idx_labels(const char *file_name) {
 	file.read(c_label, 4);
 
 	int n_labels = msbchar_2_int(c_label);
+	if (n_labels != ldataset->size){
+		cout << "The size of the labels don't match the size of the data." << endl;
+		file.close();
+		exit(EXIT_FAILURE);
+	}
 
-	_labels = new char[n_labels];
-	file.read(_labels, n_labels);
+	ldataset->labels = new char[n_labels];
+	file.read(ldataset->labels, n_labels);
 	file.close();
 }
 
-LabeledDataSet::LabeledDataSet(const char *data_files, const char *label_file) :
-	DataSet(data_files) {
-	read_idx_labels(label_file);
+void LabeledDataSet::read_idx(LabeledDataSet *ldataset, const char *data_file, const char *label_file){
+	DataSet::read_idx(ldataset, data_file);
+	LabeledDataSet::read_idx_labels(ldataset, label_file);
 }
