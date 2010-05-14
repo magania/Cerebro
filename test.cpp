@@ -14,8 +14,9 @@ int main( int argc, const char* argv[] ){
 //	for (int i=0; i< data.size(); i++)
 //		data.print(i,28);
 
-	RBMLayer layer1(ldata->dim,3);
+	RBMLayer layer1(ldata->dim, 1000);
 
-	layer1.train(ldata, 100, 0.1, 2);
+ 	for (int t=1; t<100; t++)
+	     layer1.train(ldata, 1000, 0.1, 1);
 
 }
