@@ -16,6 +16,7 @@
 #include <boost/random.hpp>
 #include <ctime>
 
+#include <xmmintrin.h>
 
 #include <iostream>
 #include <DataSet.hpp>
@@ -69,6 +70,8 @@ private:
 	void update_weights(int core);
 
 	inline float sample(float x);
+	inline void add_array(int size, float *x, float* a, float* b);
+
 public:
 	void operator()(int core);
 

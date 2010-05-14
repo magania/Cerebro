@@ -161,7 +161,7 @@ inline float RBMLayer::sample(float x){
 }
 
 void RBMLayer::down(int core){
-//	std::cout << "Core " << core << " down" << std::endl;
+	// std::cout << "Core " << core << " down" << std::endl;
 	for (int v=0; v<_vNeurons; v++){
 		float sum=0;
 		for (int h=0; h<_hNeurons; h++)
@@ -171,47 +171,59 @@ void RBMLayer::down(int core){
 }
 
 void RBMLayer::update_W0(int core, int sample){
+	// std::cout << "Core " << core << " update W0" << std::endl;
 	boost::mutex::scoped_lock  lock(_mutex_W0);
-//	std::cout << "Core " << core << " update W0" << std::endl;
 	for(int v=0; v<_vNeurons; v++)
 		for(int h=0; h<_hNeurons; h++)
 			_W0[v][h] += __data->data[sample][v] * _hP[core][h];
 }
 
 void RBMLayer::update_vBias0(int core, int sample){
+	// std::cout << "Core " << core << " update vBias0" << std::endl;
 	boost::mutex::scoped_lock  lock(_mutex_vBias0);
-//	std::cout << "Core " << core << " update vBias0" << std::endl;
-	for(int v=0; v<_vNeurons; v++)
-		_vBias0[v] += __data->data[sample][v];
+	add_array(_vNeurons, _vBias0, _vBias0, __data->data[sample]);
 }
 
 void RBMLayer::update_hBias0(int core){
+	//	std::cout << "Core " << core << " update hBias0" << std::endl;
 	boost::mutex::scoped_lock  lock(_mutex_hBias0);
-//	std::cout << "Core " << core << " update hBias0" << std::endl;
-	for(int h=0; h<_hNeurons; h++)
-		_hBias0[h] += _hP[core][h];
+	add_array(_hNeurons, _hBias0, _hBias0, _hP[core]);
 }
 
 void RBMLayer::update_W1(int core){
+	//	std::cout << "Core " << core << " update W1" << std::endl;
 	boost::mutex::scoped_lock  lock(_mutex_W1);
-//	std::cout << "Core " << core << " update W1" << std::endl;
 	for(int v=0; v<_vNeurons; v++)
 		for(int h=0; h<_hNeurons; h++)
 			_W1[v][h] += _vP[core][v] * _hP[core][h];
 }
 
 void RBMLayer::update_vBias1(int core){
+	//	std::cout << "Core " << core << " update vBias1" << std::endl;
 	boost::mutex::scoped_lock  lock(_mutex_vBias1);
-//	std::cout << "Core " << core << " update vBias1" << std::endl;
-	for(int v=0; v<_vNeurons; v++)
-		_vBias1[v] += _vP[core][v];
+	add_array(_vNeurons, _vBias1, _vBias1, _vP[core]);
+}
+
+/* x = a+b */
+void RBMLayer::add_array(int size, float *x, float* a, float* b){
+	int nLoop = size/4;
+
+    __m128* pSrc1 = (__m128*) a;
+    __m128* pSrc2 = (__m128*) b;
+    __m128* pDest = (__m128*) x;
+
+	for(int i=0; i<nLoop; i++){
+		 *pDest = _mm_add_ps(*pSrc1, *pSrc2);
+		 pSrc1++;
+		 pSrc2++;
+		 pDest++;
+	}
 }
 
 void RBMLayer::update_hBias1(int core){
+	//	std::cout << "Core " << core << " update hBias1" << std::endl;
 	boost::mutex::scoped_lock  lock(_mutex_hBias1);
-//	std::cout << "Core " << core << " update hBias1" << std::endl;
-	for(int h=0; h<_hNeurons; h++)
-		_hBias1[h] += _hP[core][h];
+	add_array(_hNeurons, _hBias1, _hBias1, _hP[core]);
 }
 
 void RBMLayer::update1(int core, int x_size, float *x, float *x0, float *x1) {
