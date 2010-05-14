@@ -85,10 +85,14 @@ void RBMLayer::train(DataSet *data, int batch_size, float epsilon, int cores) {
 	}
 
 	boost::thread* threads[__cores];
-	for (int i = 1; i < __cores; i++)
+	for (int i = 0; i < __cores; i++)
 		threads[i] = new boost::thread(boost::ref(*this), i);
 
-	operator()(0);
+	for (int i = 0; i < __cores; i++)
+		threads[i]->join();
+
+	for (int i = 0; i < __cores; i++)
+		delete threads[i];
 
 
 	for (int h=0; h<_hNeurons; h++)
