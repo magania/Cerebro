@@ -17,6 +17,7 @@
 #include <ctime>
 
 #include <xmmintrin.h>
+#include <malloc.h>
 
 #include <iostream>
 #include <DataSet.hpp>
@@ -70,7 +71,10 @@ private:
 	void update_weights(int core);
 
 	inline float sample(float x);
-	inline void add_array(int size, float *x, float* a, float* b);
+	inline void mul(int size, float* x, float* a, float k);
+	inline void add(int size, float* a, float* b);
+	inline void del(int size, float *x, float* a, float* b, float k);
+	inline void zero(int size, float *x);
 
 public:
 	void operator()(int core);
