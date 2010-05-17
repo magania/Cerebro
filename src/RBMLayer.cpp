@@ -8,31 +8,28 @@
 #include <RBMLayer.hpp>
 
 RBMLayer::RBMLayer(int visible_neurons, int hidden_neurons) :
-    _aleatorio(rng, uniform_number),
-    _vNeurons(visible_neurons),
-    _hNeurons(hidden_neurons)
-    {
+	_aleatorio(rng, uniform_number), _vNeurons(visible_neurons), _hNeurons(
+			hidden_neurons) {
 	std::cout << "RBMLayer constructor ... " << std::endl;
-
-	_W = (float**) malloc( _vNeurons * sizeof(float*));
-	_W0 = (float**) malloc( _vNeurons * sizeof(float*));
-	_W1 = (float**) malloc( _vNeurons * sizeof(float*));
-	for (int i; i<_vNeurons; i++){
-		_W[i] = (float*) memalign(_hNeurons * sizeof(float), 16);
-		_W0[i] = (float*) memalign(_hNeurons * sizeof(float), 16);
-		_W1[i] = (float*) memalign(_hNeurons * sizeof(float), 16);
+	_W = (float**) malloc(_vNeurons * sizeof(float*));
+	_W0 = (float**) malloc(_vNeurons * sizeof(float*));
+	_W1 = (float**) malloc(_vNeurons * sizeof(float*));
+	for (int i; i < _vNeurons; i++) {
+		posix_memalign((void **) &_W[i], 16, _hNeurons * sizeof(float));
+		posix_memalign((void **) &_W0[i], 16, _hNeurons * sizeof(float));
+		posix_memalign((void **) &_W1[i], 16, _hNeurons * sizeof(float));
 		zero(_hNeurons, _W[i]);
 		zero(_hNeurons, _W0[i]);
 		zero(_hNeurons, _W1[i]);
 	}
 
-	_vBias =  (float*) memalign( _vNeurons * sizeof(float), 16);
-	_vBias0 = (float*) memalign( _vNeurons * sizeof(float), 16);
-	_vBias1 = (float*) memalign( _vNeurons * sizeof(float), 16);
+	posix_memalign((void **) &_vBias, 16, _vNeurons * sizeof(float));
+	posix_memalign((void **) &_vBias0, 16, _vNeurons * sizeof(float));
+	posix_memalign((void **) &_vBias1, 16, _vNeurons * sizeof(float));
 
-	_hBias =  (float*) memalign( _hNeurons * sizeof(float), 16);
-	_hBias0 = (float*) memalign( _hNeurons * sizeof(float), 16);
-	_hBias1 = (float*) memalign( _hNeurons * sizeof(float), 16);
+	posix_memalign((void **) &_hBias, 16, _hNeurons * sizeof(float));
+	posix_memalign((void **) &_hBias0, 16, _hNeurons * sizeof(float));
+	posix_memalign((void **) &_hBias1, 16, _hNeurons * sizeof(float));
 
 	zero(_vNeurons, _vBias);
 	zero(_vNeurons, _vBias0);
@@ -43,10 +40,10 @@ RBMLayer::RBMLayer(int visible_neurons, int hidden_neurons) :
 	zero(_hNeurons, _hBias1);
 }
 
-RBMLayer::~RBMLayer(){
+RBMLayer::~RBMLayer() {
 	std::cout << "RBMLayer destructor ..." << std::endl;
 
-	for (int i; i<_vNeurons; i++){
+	for (int i; i < _vNeurons; i++) {
 		free(_W[i]);
 		free(_W0[i]);
 		free(_W1[i]);
@@ -64,21 +61,74 @@ RBMLayer::~RBMLayer(){
 	free(_hBias1);
 }
 
+/* x = k*a; */
+void RBMLayer::mul(int size, float* x, float* a, float k) {
+	int nLoop = size / 4;
+
+	__m128 K = _mm_set_ps1(k);
+
+	__m128* A = (__m128*) a;
+	__m128* X = (__m128*) x;
+
+	for(int i=0; i<nLoop; i++)
+	*X++ = _mm_mul_ps(*A++,K);
+}
+
+	/* a = a+b */
+void RBMLayer::add(int size, float* a, float* b) {
+	int nLoop = size / 4;
+
+	__m128* A = (__m128*) a;
+	__m128* B = (__m128*) b;
+
+	for(int i=0; i<nLoop; i++)
+	*A++ = _mm_add_ps(*A, *B++);
+}
+
+	/* x = k*(a-b) */
+void RBMLayer::del(int size, float* x, float* a, float* b, float k) {
+	int nLoop = size / 4;
+
+	__m128 K = _mm_set_ps1(k);
+	__m128 AB;
+
+	__m128* A = (__m128*) a;
+	__m128* B = (__m128*) b;
+	__m128* X = (__m128*) x;
+
+	for(int i=0; i<nLoop; i++) {
+		AB = _mm_sub_ps(*A++, *B++);
+		*X++ = _mm_mul_ps(AB, K);
+	}
+}
+
+	/* x = 0 */
+void RBMLayer::zero(int size, float *x) {
+	int nLoop = size / 4;
+
+	__m128 zero = _mm_set_ps1(0);
+	__m128* X = (__m128*) x;
+
+	for(int i=0; i<nLoop; i++)
+	*X++ = _mm_mul_ps(*X, zero);
+}
+
 void RBMLayer::train(DataSet *data, int batch_size, float epsilon, int cores) {
-	std::cout << "RBMLayer train: cores " << cores << " epsilon " << epsilon << std::endl;
+	std::cout << "RBMLayer train: cores " << cores << " epsilon " << epsilon
+			<< std::endl;
 	__data = data;
 	__batch_size = batch_size;
 	__epsilon = epsilon;
 	__cores_ready = 0;
 	__cores = cores;
 
-	_hP = (float**) malloc( __cores * sizeof(float*));
-	_vP = (float**) malloc( __cores * sizeof(float*));
-	for(int i=0; i<__cores; i++){
-		_hP[i] = (float*) memalign(_hNeurons * sizeof(float), 16);
-	    _vP[i] = (float*) memalign(_vNeurons * sizeof(float), 16);
-	    zero(_hNeurons,_hP[i]);
-	    zero(_vNeurons,_vP[i]);
+	_hP = (float**) malloc(__cores * sizeof(float*));
+	_vP = (float**) malloc(__cores * sizeof(float*));
+	for (int i = 0; i < __cores; i++) {
+		posix_memalign((void **) &_vP[i], 16, _vNeurons * sizeof(float));
+		posix_memalign((void **) &_hP[i], 16, _hNeurons * sizeof(float));
+		zero(_hNeurons, _hP[i]);
+		zero(_vNeurons, _vP[i]);
 	}
 
 	boost::thread* threads[__cores];
@@ -91,40 +141,40 @@ void RBMLayer::train(DataSet *data, int batch_size, float epsilon, int cores) {
 	for (int i = 0; i < __cores; i++)
 		delete threads[i];
 
-/*
-	for (int h=0; h<_hNeurons; h++)
-		std:: cout << "Bias " << _hBias[h] << std::endl;
+	for (int h = 0; h < _hNeurons; h++)
+		std::cout << "Bias " << _hBias[h] << std::endl;
 
-	DataSet xdata;
-	xdata.size = _hNeurons;
-	xdata.dim = _vNeurons;
-	xdata.data = new float*[_hNeurons];
-	for (int h=0; h<_hNeurons; h++)
-		xdata.data[h] = new float [_vNeurons];
+		DataSet xdata;
+	 xdata.size = _hNeurons;
+	 xdata.dim = _vNeurons;
+	 xdata.data = new float*[_hNeurons];
+	 for (int h=0; h<_hNeurons; h++)
+	 xdata.data[h] = new float [_vNeurons];
 
 	float min = _W[0][0];
 	float max = _W[0][0];
-        for (int v=0; v<_vNeurons; v++)
-                for (int h=0; h<_hNeurons; h++){
-			if (_W[v][h] < min ) min =_W[v][h];
-			if (_W[v][h] > max ) max =_W[v][h];
- 		}
-	std::cout << "Min: " << min  << " Max: " << max << std::endl;
+	for (int v = 0; v < _vNeurons; v++)
+		for (int h = 0; h < _hNeurons; h++) {
+			if (_W[v][h] < min)
+				min = _W[v][h];
+			if (_W[v][h] > max)
+				max = _W[v][h];
+		}
+	std::cout << "Min: " << min << " Max: " << max << std::endl;
 
-
-	for (int v=0; v<_vNeurons; v++)
-		for (int h=0; h<_hNeurons; h++)
-			xdata.data[h][v] = (_W[v][h] - min)/(max-min);
-
-	DataSet::print(&xdata, 0, 28);
-	DataSet::print(&xdata, 1, 28);
-	DataSet::print(&xdata, 2, 28);
+		for (int v=0; v<_vNeurons; v++)
 	 for (int h=0; h<_hNeurons; h++)
-                delete xdata.data[h];
-        delete xdata.data;
+	 xdata.data[h][v] = (_W[v][h] - min)/(max-min);
 
-*/
-	for(int i=0; i<__cores; i++){
+	 DataSet::print(&xdata, 0, 28);
+	 DataSet::print(&xdata, 1, 28);
+	 DataSet::print(&xdata, 2, 28);
+	 for (int h=0; h<_hNeurons; h++)
+	 delete xdata.data[h];
+	 delete xdata.data;
+
+
+	for (int i = 0; i < __cores; i++) {
 		free(_vP[i]);
 		free(_hP[i]);
 	}
@@ -132,126 +182,74 @@ void RBMLayer::train(DataSet *data, int batch_size, float epsilon, int cores) {
 	free(_hP);
 }
 
-inline void RBMLayer::up(int core, float *V){
-	for (int h=0; h<_hNeurons; h++){
-		float sum=0;
-		for (int v=0; v<_vNeurons; v++)
+inline void RBMLayer::up(int core, float *V) {
+	for (int h = 0; h < _hNeurons; h++) {
+		float sum = 0;
+		for (int v = 0; v < _vNeurons; v++)
 			sum += _W[v][h] * V[v];
-		_hP[core][h] = 1.0/(1.0+exp(-sum -_hBias[h]));
+		_hP[core][h] = 1.0 / (1.0 + exp(-sum - _hBias[h]));
 	}
 }
 
-void RBMLayer::up_d(int core, int sample){
-//	std::cout << "Core " << core << " up_d" << std::endl;
+void RBMLayer::up_d(int core, int sample) {
+	//	std::cout << "Core " << core << " up_d" << std::endl;
 	up(core, __data->data[sample]);
 }
 
-void RBMLayer::up(int core){
-//	std::cout << "Core " << core << " up" << std::endl;
+void RBMLayer::up(int core) {
+	//	std::cout << "Core " << core << " up" << std::endl;
 	up(core, _vP[core]);
 }
 
-inline float RBMLayer::sample(float x){
-	return x > _aleatorio()	;
+inline float RBMLayer::sample(float x) {
+	return x > _aleatorio();
 }
 
-void RBMLayer::down(int core){
+void RBMLayer::down(int core) {
 	// std::cout << "Core " << core << " down" << std::endl;
-	for (int v=0; v<_vNeurons; v++){
-		float sum=0;
-		for (int h=0; h<_hNeurons; h++)
+	for (int v = 0; v < _vNeurons; v++) {
+		float sum = 0;
+		for (int h = 0; h < _hNeurons; h++)
 			sum += _W[v][h] * sample(_hP[core][h]);
-		_vP[core][v] = 1.0/(1.0+exp(-sum -_vBias[v]));
+		_vP[core][v] = 1.0 / (1.0 + exp(-sum - _vBias[v]));
 	}
 }
 
-void RBMLayer::update_W0(int core, int sample){
+void RBMLayer::update_W0(int core, int sample) {
 	// std::cout << "Core " << core << " update W0" << std::endl;
-	boost::mutex::scoped_lock  lock(_mutex_W0);
-	for(int v=0; v<_vNeurons; v++)
+	boost::mutex::scoped_lock lock(_mutex_W0);
+	for (int v = 0; v < _vNeurons; v++)
 		mul(_hNeurons, _W0[v], _hP[core], __data->data[sample][v]);
 }
 
-void RBMLayer::update_vBias0(int core, int sample){
+void RBMLayer::update_vBias0(int core, int sample) {
 	// std::cout << "Core " << core << " update vBias0" << std::endl;
-	boost::mutex::scoped_lock  lock(_mutex_vBias0);
+	boost::mutex::scoped_lock lock(_mutex_vBias0);
 	add(_vNeurons, _vBias0, __data->data[sample]);
 }
 
-void RBMLayer::update_hBias0(int core){
+void RBMLayer::update_hBias0(int core) {
 	//	std::cout << "Core " << core << " update hBias0" << std::endl;
-	boost::mutex::scoped_lock  lock(_mutex_hBias0);
+	boost::mutex::scoped_lock lock(_mutex_hBias0);
 	add(_hNeurons, _hBias0, _hP[core]);
 }
 
-void RBMLayer::update_W1(int core){
-	std::cout << "Core " << core << " update W1" << std::endl;
-	boost::mutex::scoped_lock  lock(_mutex_W1);
-	for(int v=0; v<_vNeurons; v++)
+void RBMLayer::update_W1(int core) {
+	//	std::cout << "Core " << core << " update W1" << std::endl;
+	boost::mutex::scoped_lock lock(_mutex_W1);
+	for (int v = 0; v < _vNeurons; v++)
 		mul(_hNeurons, _W1[v], _hP[core], _vP[core][v]);
 }
 
-void RBMLayer::update_vBias1(int core){
-	std::cout << "Core " << core << " update vBias1" << std::endl;
-	boost::mutex::scoped_lock  lock(_mutex_vBias1);
+void RBMLayer::update_vBias1(int core) {
+	//	std::cout << "Core " << core << " update vBias1" << std::endl;
+	boost::mutex::scoped_lock lock(_mutex_vBias1);
 	add(_vNeurons, _vBias1, _vP[core]);
 }
 
-/* x = k*a; */
-void RBMLayer::mul(int size, float* x, float* a, float k){
-	int nLoop = size/4;
-
-	__m128 K = _mm_set_ps1(k);
-
-    __m128* A = (__m128*) a;
-    __m128* X = (__m128*) x;
-
-	for(int i=0; i<nLoop; i++)
-		 *X = _mm_mul_ps(*A++,K);
-}
-
-/* a = a+b */
-void RBMLayer::add(int size, float* a, float* b){
-	int nLoop = size/4;
-
-    __m128* A = (__m128*) a;
-    __m128* B = (__m128*) b;
-
-	for(int i=0; i<nLoop; i++)
-		 *A = _mm_add_ps(*A++, *B++);
-}
-
-/* x = k*(a-b) */
-void RBMLayer::del(int size, float* x, float* a, float* b, float k){
-	int nLoop = size/4;
-
-	__m128 K = _mm_set_ps1(k);
-	__m128 AB;
-
-    __m128* A = (__m128*) a;
-    __m128* B = (__m128*) b;
-    __m128* X = (__m128*) x;
-
-	for(int i=0; i<nLoop; i++){
-		 AB = _mm_sub_ps(*A++, *B++);
-		 *X = _mm_mul_ps(AB, K);
-	}
-}
-
-/* x = 0 */
-void RBMLayer::zero(int size, float *x){
-	int nLoop = size/4;
-
-	__m128 zero = _mm_load1_ps(0);
-    __m128* X = (__m128*) x;
-
-	for(int i=0; i<nLoop; i++)
-		 *X = _mm_mul_ps(*X,zero);
-}
-
-void RBMLayer::update_hBias1(int core){
-	std::cout << "Core " << core << " update hBias1" << std::endl;
-	boost::mutex::scoped_lock  lock(_mutex_hBias1);
+void RBMLayer::update_hBias1(int core) {
+	//	std::cout << "Core " << core << " update hBias1" << std::endl;
+	boost::mutex::scoped_lock lock(_mutex_hBias1);
 	add(_hNeurons, _hBias1, _hP[core]);
 }
 
@@ -260,9 +258,10 @@ void RBMLayer::update1(int core, int x_size, float *x, float *x0, float *x1) {
 		x[i] += __epsilon * (x0[i] - x1[i]) / __batch_size;
 }
 
-void RBMLayer::update2(int core, int x_size, int y_size, float **x, float **x0, float **x1) {
+void RBMLayer::update2(int core, int x_size, int y_size, float **x, float **x0,
+		float **x1) {
 	for (int i = core; i < x_size; i += __cores)
-		del(y_size, x[i], x0[i], x1[i], __epsilon/__batch_size);
+		del(y_size, x[i], x0[i], x1[i], __epsilon / __batch_size);
 }
 
 void RBMLayer::update_W(int core) {
@@ -278,9 +277,9 @@ void RBMLayer::update_hBias(int core) {
 }
 
 void RBMLayer::synchronize() {
-	std::cout << "synchonizing ..." << std::endl;
-	boost::mutex::scoped_lock  lock(_mutex_ready);
-	if (++__cores_ready == __cores){
+	//	std::cout << "synchonizing ..." << std::endl;
+	boost::mutex::scoped_lock lock(_mutex_ready);
+	if (++__cores_ready == __cores) {
 		__cores_ready = 0;
 		_cond_ready.notify_all();
 	} else {
@@ -295,7 +294,7 @@ void RBMLayer::update_weights(int core) {
 	update_vBias(core);
 	update_hBias(core);
 
-	for (int i; i<_vNeurons; i++){
+	for (int i; i < _vNeurons; i++) {
 		zero(_hNeurons, _W0[i]);
 		zero(_hNeurons, _W1[i]);
 	}
@@ -311,13 +310,13 @@ void RBMLayer::update_weights(int core) {
 
 void RBMLayer::operator()(int core) {
 	std::cout << "Core " << core << " Starting ... " << std::endl;
-	for (int sample = core; sample<__data->size; sample +=__cores){
-//		std::cout << core << ": Sample " << sample << std::endl;
+	for (int sample = core; sample < __data->size; sample += __cores) {
+		std::cout << core << ": Sample " << sample << std::endl;
 
-		up_d(core,sample);
+		up_d(core, sample);
 
-		update_W0(core,sample);
-		update_vBias0(core,sample);
+		update_W0(core, sample);
+		update_vBias0(core, sample);
 		update_hBias0(core);
 
 		down(core);
@@ -327,9 +326,9 @@ void RBMLayer::operator()(int core) {
 		update_vBias1(core);
 		update_hBias1(core);
 
-
-		if ( ( (sample % __batch_size) - core) == (__batch_size - __cores) ||
-				sample == (__data->size - (__data->size % __cores) + core - __cores) )
+		if (((sample % __batch_size) - core) == (__batch_size - __cores)
+				|| sample == (__data->size - (__data->size % __cores) + core
+						- __cores))
 			update_weights(core);
 	}
 }
