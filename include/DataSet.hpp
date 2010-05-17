@@ -10,22 +10,23 @@
 
 class DataSet {
 public:
+	DataSet(const char *file_name);
+	DataSet(int size, int dim);
+	virtual ~DataSet();
 	int size, dim;
 	float **data;
 
-	static void read_idx(DataSet *dataset, const char *file_name);
-	static void print(DataSet *dataset, int i, int cols = 1);
+	void print(int i, int cols = 1);
 
 	static int msbchar_2_int(char* msbchar);
 };
 
 class LabeledDataSet : public DataSet {
 public:
+	LabeledDataSet(const char *data_files, const char *label_file);
+	LabeledDataSet(int size, int dim);
+	~LabeledDataSet();
 	char *labels;
-
-	static void read_idx(LabeledDataSet *ldataset, const char *data_files, const char *label_file);
-private:
-	static void read_idx_labels(LabeledDataSet *ldataset, const char *file_name);
 };
 
 

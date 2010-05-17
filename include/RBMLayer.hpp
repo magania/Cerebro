@@ -82,7 +82,7 @@ public:
 
 	RBMLayer(int visible_neurons, int hidden_neurons);
 	~RBMLayer();
-	void train(DataSet* data, int batches, float epsilon, int cores = 1);
+	void train(DataSet& data, int batches, float epsilon, int cores = 1);
 };
 
 #endif /* RBMLAYER_HPP_ */

@@ -8,15 +8,15 @@
 #include <RBMLayer.hpp>
 
 int main( int argc, const char* argv[] ){
-	LabeledDataSet *ldata = new LabeledDataSet();
-	LabeledDataSet::read_idx(ldata, "mnist/train-images-idx3-ubyte", "mnist/train-labels-idx1-ubyte");
+	LabeledDataSet ldata("mnist/train-images-idx3-ubyte", "mnist/train-labels-idx1-ubyte");
 
-//	for (int i=0; i< data.size(); i++)
-//		data.print(i,28);
+//	for (int i=0; i< 10; i++)
+//		ldata->print(i,28);
 
-	RBMLayer layer1(ldata->dim, 400);
+	RBMLayer layer1(ldata.dim, 8);
 
-// 	for (int t=1; t<100; t++)
+ 	for (int t=1; t<2; t++){
+ 		std::cout << "Epoch: " << t << std::endl;
 	     layer1.train(ldata, 1000, 0.1, 2);
-
+ 	}
 }
