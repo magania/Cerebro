@@ -21,6 +21,7 @@
 #include <stdlib.h>
 
 #include <iostream>
+#include <fstream>
 #include <DataSet.hpp>
 
 class RBMLayer {
@@ -83,6 +84,8 @@ public:
 	RBMLayer(int visible_neurons, int hidden_neurons);
 	~RBMLayer();
 	void train(DataSet& data, int batches, float epsilon, int cores = 1);
+
+	void write_W(const char* file_name);
 };
 
 #endif /* RBMLAYER_HPP_ */

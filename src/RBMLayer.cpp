@@ -147,7 +147,7 @@ void RBMLayer::train(DataSet& data, int batch_size, float epsilon, int cores) {
 	for (int i = 0; i < __cores; i++)
 		delete threads[i];
 
-	for (int h = 0; h < _hNeurons; h++)
+/*	for (int h = 0; h < _hNeurons; h++)
 		std::cout << "Bias " << _hBias[h] << std::endl;
 
 	DataSet xdata(_hNeurons, _vNeurons);
@@ -168,7 +168,7 @@ void RBMLayer::train(DataSet& data, int batch_size, float epsilon, int cores) {
 	    xdata.data[h][v] = (_W[v][h] - min)/(max-min);
 
 	 xdata.print(0, 28);
-	 xdata.print(1, 28);
+	 xdata.print(1, 28);*/
 
 	for (int i = 0; i < __cores; i++) {
 		free(_vP[i]);
@@ -176,6 +176,17 @@ void RBMLayer::train(DataSet& data, int batch_size, float epsilon, int cores) {
 	}
 	free(_vP);
 	free(_hP);
+}
+
+void RBMLayer::write_W(const char* file_name){
+	std::cout << "Writing " << file_name << std::endl;
+	std::ofstream file(file_name);
+	for (int h = 0; h < _hNeurons; h++){
+		for (int v = 0; v < _vNeurons; v++){
+			file << _W[v][h] << ' ';
+		}
+		file << std::endl;
+	}
 }
 
 inline void RBMLayer::up(int core, float *V) {
