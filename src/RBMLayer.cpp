@@ -18,7 +18,9 @@ RBMLayer::RBMLayer(int visible_neurons, int hidden_neurons) :
 		posix_memalign((void **) &_W[i], 16, _hNeurons * sizeof(float));
 		posix_memalign((void **) &_W0[i], 16, _hNeurons * sizeof(float));
 		posix_memalign((void **) &_W1[i], 16, _hNeurons * sizeof(float));
-		zero(_hNeurons, _W[i]);
+		//zero(_hNeurons, _W[i]);
+		for (int j=0; j < _hNeurons; j++)
+			_W[i][j] = _aleatorio() * 0.1;
 		zero(_hNeurons, _W0[i]);
 		zero(_hNeurons, _W1[i]);
 	}
