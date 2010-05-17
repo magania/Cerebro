@@ -14,7 +14,7 @@ RBMLayer::RBMLayer(int visible_neurons, int hidden_neurons) :
 	_W = (float**) malloc(_vNeurons * sizeof(float*));
 	_W0 = (float**) malloc(_vNeurons * sizeof(float*));
 	_W1 = (float**) malloc(_vNeurons * sizeof(float*));
-	for (int i; i < _vNeurons; i++) {
+	for (int i=0; i < _vNeurons; i++) {
 		posix_memalign((void **) &_W[i], 16, _hNeurons * sizeof(float));
 		posix_memalign((void **) &_W0[i], 16, _hNeurons * sizeof(float));
 		posix_memalign((void **) &_W1[i], 16, _hNeurons * sizeof(float));
@@ -43,7 +43,7 @@ RBMLayer::RBMLayer(int visible_neurons, int hidden_neurons) :
 RBMLayer::~RBMLayer() {
 	std::cout << "RBMLayer destructor ..." << std::endl;
 
-	for (int i; i < _vNeurons; i++) {
+	for (int i=0; i < _vNeurons; i++) {
 		free(_W[i]);
 		free(_W0[i]);
 		free(_W1[i]);
@@ -294,7 +294,7 @@ void RBMLayer::update_weights(int core) {
 	update_vBias(core);
 	update_hBias(core);
 
-	for (int i; i < _vNeurons; i++) {
+	for (int i=0; i < _vNeurons; i++) {
 		zero(_hNeurons, _W0[i]);
 		zero(_hNeurons, _W1[i]);
 	}
