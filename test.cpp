@@ -19,11 +19,13 @@ int main( int argc, const char* argv[] ){
 
 	RBMLayer layer1(ldata.dim, 4);
 
- 	for (int t=1; t<60; t++){
+ 	for (int t=1; t<=60; t++){
  		std::cout << "Epoch: " << t << std::endl;
 	    layer1.train(ldata, 1000, 0.1, 2);
-	    std::stringstream file;
-	    file << "W_" << t << ".txt";
-	    layer1.write_W(file.str().c_str());
+	    if ( t % 10 == 1 || t == 60 ){
+	    	std::stringstream file;
+	    	file << "W_" << t << ".txt";
+	    	layer1.write_W(file.str().c_str());
+	    }
  	}
 }

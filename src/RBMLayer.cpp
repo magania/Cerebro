@@ -10,7 +10,7 @@
 RBMLayer::RBMLayer(int visible_neurons, int hidden_neurons) :
 	_aleatorio(rng, uniform_number), _vNeurons(visible_neurons), _hNeurons(
 			hidden_neurons) {
-	std::cout << "RBMLayer constructor ... " << std::endl;
+//	std::cout << "RBMLayer constructor ... " << std::endl;
 	_W = (float**) malloc(_vNeurons * sizeof(float*));
 	_W0 = (float**) malloc(_vNeurons * sizeof(float*));
 	_W1 = (float**) malloc(_vNeurons * sizeof(float*));
@@ -43,7 +43,7 @@ RBMLayer::RBMLayer(int visible_neurons, int hidden_neurons) :
 }
 
 RBMLayer::~RBMLayer() {
-	std::cout << "RBMLayer destructor ..." << std::endl;
+//	std::cout << "RBMLayer destructor ..." << std::endl;
 
 	for (int i=0; i < _vNeurons; i++) {
 		free(_W[i]);
@@ -120,8 +120,8 @@ void RBMLayer::zero(int size, float *x) {
 }
 
 void RBMLayer::train(DataSet& data, int batch_size, float epsilon, int cores) {
-	std::cout << "RBMLayer train: cores " << cores << " epsilon " << epsilon
-			<< std::endl;
+//	std::cout << "RBMLayer train: cores " << cores << " epsilon " << epsilon
+//			<< std::endl;
 	__data = &data;
 	__batch_size = batch_size;
 	__epsilon = epsilon;
@@ -182,11 +182,19 @@ void RBMLayer::write_W(const char* file_name){
 	std::cout << "Writing " << file_name << std::endl;
 	std::ofstream file(file_name);
 	for (int h = 0; h < _hNeurons; h++){
-		for (int v = 0; v < _vNeurons; v++){
+		for (int v = 0; v < _vNeurons; v++)
 			file << _W[v][h] << ' ';
-		}
 		file << std::endl;
 	}
+
+	for (int h = 0; h < _hNeurons; h++)
+		file << _hBias[h] << ' ';
+	file << std::endl;
+
+	for (int v = 0; v < _vNeurons; v++)
+			file << _vBias[v] << ' ';
+	file << std::endl;
+
 }
 
 inline void RBMLayer::up(int core, float *V) {
