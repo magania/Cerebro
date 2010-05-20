@@ -1,6 +1,6 @@
 #! python
 
-f=open('W_7.txt', 'r')
+f=open('W_1.txt', 'r')
 
 nline=0
 for line in f.readlines():

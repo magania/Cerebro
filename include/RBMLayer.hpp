@@ -86,6 +86,10 @@ public:
 	void train(DataSet& data, int batches, float epsilon, int cores = 1);
 
 	void write_W(const char* file_name);
+	void read_W(const char* file_name);
+
+	DataSet* up_data(DataSet& data);
+	DataSet* down_data(DataSet& data);
 };
 
 #endif /* RBMLAYER_HPP_ */

@@ -197,6 +197,21 @@ void RBMLayer::write_W(const char* file_name){
 
 }
 
+void RBMLayer::read_W(const char* file_name){
+	std::cout << "Reading " << file_name << std::endl;
+	std::ifstream file(file_name);
+	for (int h = 0; h < _hNeurons; h++)
+		for (int v = 0; v < _vNeurons; v++)
+			file >> _W[v][h];
+
+	for (int h = 0; h < _hNeurons; h++)
+		file >> _hBias[h];
+
+	for (int v = 0; v < _vNeurons; v++)
+			file >> _vBias[v];
+
+}
+
 inline void RBMLayer::up(int core, float *V) {
 	for (int h = 0; h < _hNeurons; h++) {
 		float sum = 0;
@@ -209,6 +224,33 @@ inline void RBMLayer::up(int core, float *V) {
 void RBMLayer::up_d(int core, int sample) {
 	//	std::cout << "Core " << core << " up_d" << std::endl;
 	up(core, __data->data[sample]);
+}
+
+DataSet* RBMLayer::up_data(DataSet& data) {
+	_hP = (float**) malloc(__cores * sizeof(float*));
+	DataSet* out_data = new DataSet(data.size, _hNeurons);
+
+	for (int sample = 0; sample < data.size; sample++){
+		_hP[0] = out_data->data[sample];
+		up(0, data.data[sample]);
+	}
+
+	free(_hP);
+	return out_data;
+}
+
+DataSet* RBMLayer::down_data(DataSet& data) {
+	_vP = (float**) malloc(__cores * sizeof(float*));
+	_hP = (float**) malloc(__cores * sizeof(float*));
+	DataSet* out_data = new DataSet(data.size, _vNeurons);
+	for (int sample = 0; sample < 100; sample++){
+		_vP[0] = out_data->data[sample];
+		_hP[0] = data.data[sample];
+		down(0);
+	}
+	free(_vP);
+	free(_hP);
+	return out_data;
 }
 
 void RBMLayer::up(int core) {
