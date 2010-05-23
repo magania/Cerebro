@@ -227,7 +227,7 @@ void RBMLayer::up_d(int core, int sample) {
 }
 
 DataSet* RBMLayer::up_data(DataSet& data) {
-	_hP = (float**) malloc(__cores * sizeof(float*));
+	_hP = (float**) malloc(1 * sizeof(float*));
 	DataSet* out_data = new DataSet(data.size, _hNeurons);
 
 	for (int sample = 0; sample < data.size; sample++){
@@ -240,8 +240,8 @@ DataSet* RBMLayer::up_data(DataSet& data) {
 }
 
 DataSet* RBMLayer::down_data(DataSet& data) {
-	_vP = (float**) malloc(__cores * sizeof(float*));
-	_hP = (float**) malloc(__cores * sizeof(float*));
+	_vP = (float**) malloc(1 * sizeof(float*));
+	_hP = (float**) malloc(1 * sizeof(float*));
 	DataSet* out_data = new DataSet(data.size, _vNeurons);
 	for (int sample = 0; sample < 100; sample++){
 		_vP[0] = out_data->data[sample];
